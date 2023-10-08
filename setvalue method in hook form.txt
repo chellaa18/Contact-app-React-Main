@@ -1,0 +1,99 @@
+// alternate way to default values in hook form 
+//setValue method
+
+import React, { useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+import Swal from "sweetalert2";
+
+const schema = yup
+  .object({
+    name: yup
+      .string()
+      .matches(/^[a-zA-Z ]*$/g, "Name should be in alphabets")
+      .required("Name is required")
+      .min(3, "Name must be at least 3 characters")
+      .max(20, "Name should not exceed 20 characters")
+      .trim(),
+    mobile: yup
+      .string()
+      .required("mobile Number is Required")
+      .matches(
+        /^[0-9]{10}$/g,
+        "mobile number should be in numeric value and  10 digits"
+      )
+      .trim(),
+    relation: yup.string().required("Relation is required"),
+  })
+  .required();
+
+const EditContact = () => {
+  const navigate = useNavigate();
+  const params = useParams();
+
+  const userDetails = JSON.parse(localStorage.getItem("loggedInUser")) || [];
+  const userEmail = userDetails.email;
+
+  const userContacts = JSON.parse(localStorage.getItem(userEmail));
+
+  const contactToEdit = userContacts.find((contact) => contact.id == params.id);
+
+  const {
+    register,
+    handleSubmit,
+    setValue, // You can use the setValue function to set form field values
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: "onBlur",
+  });
+
+  const onSubmit = (data) => {
+    const contactIndex = userContacts.findIndex(
+      (contact) => contact.id == params.id
+    );
+
+    const updatedUserContacts = [...userContacts];
+    updatedUserContacts[contactIndex] = {
+      ...updatedUserContacts[contactIndex],
+      ...data,
+    };
+
+    localStorage.setItem(userEmail, JSON.stringify(updatedUserContacts));
+    Swal.fire(
+      {
+        icon: "success",
+        title: "Updated",
+        text: "Contact Updated Successfully",
+      },
+      navigate("/allcontact")
+    );
+  };
+
+  // Manually set the default values using setValue
+  useEffect(() => {
+    setValue("name", contactToEdit.name);
+    setValue("mobile", contactToEdit.mobile);
+    setValue("relation", contactToEdit.relation);
+  }, [contactToEdit]); // Run this effect when contactToEdit changes
+
+  return (
+    <div className="container vh-100">
+      <form onSubmit={handleSubmit(onSubmit)} className="text-white p-5">
+        {/* ... (form fields) */}
+
+        <button type="submit" className="btn btn-primary">
+          Save Changes
+        </button>
+        <button type="reset" className="btn btn-secondary mx-2">
+          Reset Form
+        </button>
+      </form>
+    </div>
+  );
+};
+
+export default EditContact;
